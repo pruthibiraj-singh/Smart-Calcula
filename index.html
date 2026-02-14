@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Calculator Pro</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    background:#f2f2f2;
+    padding:20px;
+}
+.container{
+    max-width:520px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 0 12px rgba(0,0,0,0.15);
+    overflow:hidden;
+}
+
+/* APP ANIMATION */
+.section{
+    display:none;
+    opacity:0;
+    transform:translateX(30px);
+    transition:all .35s ease;
+}
+.section.active{
+    display:block;
+    opacity:1;
+    transform:translateX(0);
+}
+
+h2,h3{text-align:center;}
+
+button{
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+    border:none;
+    background:#007bff;
+    color:white;
+    border-radius:6px;
+    cursor:pointer;
+}
+button:hover{background:#0056b3;}
+.backBtn{background:#555;}
+.resetBtn{background:#ff9800;}
+.clearBtn{background:#d32f2f;}
+
+input,select{
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border:1px solid #ccc;
+    border-radius:5px;
+}
+
+.result{font-weight:bold;color:green;margin-top:10px;}
+
+.history{
+    background:#f9f9f9;
+    padding:10px;
+    border-radius:5px;
+    max-height:220px;
+    overflow-y:auto;
+    margin-top:8px;
+}
+.item{
+    border-bottom:1px solid #ddd;
+    padding:8px 0;
+    font-size:14px;
+}
+.small{color:#666;font-size:12px;}
+.deleteBtn{
+    background:red;
+    color:white;
+    border:none;
+    padding:3px 8px;
+    border-radius:4px;
+    float:right;
+    width:auto;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<!-- HOME -->
+<div id="home" class="section active">
+    <h2>Welcome 👋</h2>
+    <h3>Choose Calculator</h3>
+    <button onclick="showSection('percent')">Percentage Calculator</button>
+    <button onclick="showSection('discount')">Discount Calculator</button>
+    <button onclick="showSection('weight')">Weight & Price Calculator</button>
+</div>
+
+<!-- PERCENT -->
+<div id="percent" class="section">
+    <button class="backBtn" onclick="showSection('home')">⬅ Back</button>
+    <h3>Percentage Calculator</h3>
+    <input id="percentNote" placeholder="Note">
+    <input id="fullMark" type="number" placeholder="Full Marks">
+    <input id="yourMark" type="number" placeholder="Your Marks">
+    <input id="percentage" type="number" placeholder="Percentage (%)">
+
+    <button onclick="calculatePercentage()">Calculate</button>
+    <button class="resetBtn" onclick="resetPercent()">Reset</button>
+    <div id="percentResult" class="result"></div>
+
+    <button onclick="toggleHistory('percentHistory')">Show History</button>
+    <button class="clearBtn" onclick="clearAll('percentHistory','percentData')">Clear All History</button>
+    <div id="percentHistory" class="history" style="display:none"></div>
+</div>
+
+<!-- DISCOUNT -->
+<div id="discount" class="section">
+    <button class="backBtn" onclick="showSection('home')">⬅ Back</button>
+    <h3>Discount Calculator</h3>
+    <input id="discountNote" placeholder="Note">
+    <input id="originalPrice" type="number" placeholder="Original Price">
+    <input id="discountPercent" type="number" placeholder="Discount %">
+    <input id="finalPrice" type="number" placeholder="Final Price">
+
+    <button onclick="calculateDiscount()">Calculate</button>
+    <button class="resetBtn" onclick="resetDiscount()">Reset</button>
+    <div id="discountResult" class="result"></div>
+
+    <button onclick="toggleHistory('discountHistory')">Show History</button>
+    <button class="clearBtn" onclick="clearAll('discountHistory','discountData')">Clear All History</button>
+    <div id="discountHistory" class="history" style="display:none"></div>
+</div>
+
+<!-- WEIGHT -->
+<div id="weight" class="section">
+    <button class="backBtn" onclick="showSection('home')">⬅ Back</button>
+    <h3>Weight & Price Calculator</h3>
+    <input id="weightNote" placeholder="Note">
+    <input id="pricePerKg" type="number" placeholder="Price of 1 kg">
+    <input id="weightValue" type="number" placeholder="Weight">
+    <select id="weightUnit">
+        <option value="kg">kg</option>
+        <option value="g">g</option>
+    </select>
+    <input id="rupees" type="number" placeholder="Rupees">
+
+    <button onclick="calculateWeight()">Calculate</button>
+    <button class="resetBtn" onclick="resetWeight()">Reset</button>
+    <div id="weightResult" class="result"></div>
+
+    <button onclick="toggleHistory('weightHistory')">Show History</button>
+    <button class="clearBtn" onclick="clearAll('weightHistory','weightData')">Clear All History</button>
+    <div id="weightHistory" class="history" style="display:none"></div>
+</div>
+
+</div>
+
+<script>
+
+/* ---------- APP TRANSITION ---------- */
+function showSection(id){
+    document.querySelectorAll(".section").forEach(s=>{
+        s.classList.remove("active");
+    });
+    document.getElementById(id).classList.add("active");
+}
+
+/* ---------- TIME ---------- */
+function nowTime(){
+    return new Date().toLocaleString();
+}
+
+/* ---------- HISTORY STORAGE ---------- */
+function saveData(key,data){
+    localStorage.setItem(key,JSON.stringify(data));
+}
+
+function loadData(key){
+    return JSON.parse(localStorage.getItem(key)||"[]");
+}
+
+function addHistory(boxId,key,line1,line2){
+    let data=loadData(key);
+    data.unshift({line1,line2,time:nowTime()});
+    saveData(key,data);
+    renderHistory(boxId,key);
+}
+
+function renderHistory(boxId,key){
+    let box=document.getElementById(boxId);
+    let data=loadData(key);
+    box.innerHTML="";
+
+    data.forEach((h,index)=>{
+        let div=document.createElement("div");
+        div.className="item";
+        div.innerHTML=`
+        <button class="deleteBtn" onclick="deleteOne('${boxId}','${key}',${index})">❌</button>
+        <div>${h.line1}</div>
+        <div class="small">${h.line2}</div>
+        <div class="small">🕒 ${h.time}</div>`;
+        box.appendChild(div);
+    });
+}
+
+function deleteOne(box,key,index){
+    let data=loadData(key);
+    data.splice(index,1);
+    saveData(key,data);
+    renderHistory(box,key);
+}
+
+function clearAll(box,key){
+    localStorage.removeItem(key);
+    renderHistory(box,key);
+}
+
+function toggleHistory(id){
+    let b=document.getElementById(id);
+    b.style.display=(b.style.display==="none")?"block":"none";
+}
+
+/* ---------- CALCULATORS ---------- */
+
+function calculatePercentage(){
+    let n=percentNote.value||"Exam";
+    let f=parseFloat(fullMark.value);
+    let m=parseFloat(yourMark.value);
+    let p=parseFloat(percentage.value);
+
+    let filled=[f,m,p].filter(x=>!isNaN(x)).length;
+    if(filled!==2){percentResult.innerText="Fill any 2 boxes";return;}
+
+    if(isNaN(p)){ p=(m/f)*100; percentage.value=p.toFixed(2);}
+    else if(isNaN(f)){ f=(m*100)/p; fullMark.value=f.toFixed(2);}
+    else { m=(f*p)/100; yourMark.value=m.toFixed(2);}
+
+    addHistory("percentHistory","percentData",
+        `${n} total mark is ${f}, you score ${m}, so percentage is ${p.toFixed(2)}%`,
+        `📘 ${n} | ${m} ÷ ${f} × 100 = ${p.toFixed(2)}%`);
+
+    percentResult.innerText="Calculated!";
+}
+
+function calculateDiscount(){
+    let n=discountNote.value||"Item";
+    let o=parseFloat(originalPrice.value);
+    let d=parseFloat(discountPercent.value);
+    let f=parseFloat(finalPrice.value);
+
+    let filled=[o,d,f].filter(x=>!isNaN(x)).length;
+    if(filled!==2){discountResult.innerText="Fill any 2 boxes";return;}
+
+    if(isNaN(f)){ f=o-(o*d/100); finalPrice.value=f.toFixed(2);}
+    else if(isNaN(d)){ d=((o-f)/o)*100; discountPercent.value=d.toFixed(2);}
+    else { o=f/(1-d/100); originalPrice.value=o.toFixed(2);}
+
+    addHistory("discountHistory","discountData",
+        `${n} price ₹${o}, discount ${d}% → final ₹${f.toFixed(2)}`,
+        `🛒 ${n} | ₹${o} − ${d}% = ₹${f.toFixed(2)}`);
+
+    discountResult.innerText="Calculated!";
+}
+
+function calculateWeight(){
+    let n=weightNote.value||"Item";
+    let price=parseFloat(pricePerKg.value);
+    let w=parseFloat(weightValue.value);
+    let ru=parseFloat(rupees.value);
+    let unit=weightUnit.value;
+    let showW=w;
+
+    if(!isNaN(w)&&unit==="g") w=w/1000;
+
+    let filled=[price,w,ru].filter(x=>!isNaN(x)).length;
+    if(filled!==2){weightResult.innerText="Fill any 2 boxes";return;}
+
+    if(isNaN(ru)){ ru=w*price; rupees.value=ru.toFixed(2);}
+    else if(isNaN(w)){ w=ru/price; weightValue.value=(unit==="g")?(w*1000).toFixed(2):w.toFixed(2);}
+    else { price=ru/w; pricePerKg.value=price.toFixed(2);}
+
+    addHistory("weightHistory","weightData",
+        `${showW}${unit} of ${n} costs ₹${ru.toFixed(2)}`,
+        `⚖️ ${n} | ${showW}${unit} × ₹${price.toFixed(2)}/kg = ₹${ru.toFixed(2)}`);
+
+    weightResult.innerText="Calculated!";
+}
+
+/* RESET */
+function resetPercent(){percentNote.value="";fullMark.value="";yourMark.value="";percentage.value="";percentResult.innerText="";}
+function resetDiscount(){discountNote.value="";originalPrice.value="";discountPercent.value="";finalPrice.value="";discountResult.innerText="";}
+function resetWeight(){weightNote.value="";pricePerKg.value="";weightValue.value="";rupees.value="";weightResult.innerText="";}
+
+/* LOAD SAVED HISTORY */
+renderHistory("percentHistory","percentData");
+renderHistory("discountHistory","discountData");
+renderHistory("weightHistory","weightData");
+
+</script>
+</body>
+</html>
